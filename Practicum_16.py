@@ -15,15 +15,6 @@ class State:
         self.num = State.num_instances
         State.num_instances += 1
 
-    def __hash__(self):
-        return self.num
-
-    def __str__(self):
-        return "<State %d>" % self.num
-
-    def __repr__(self):
-        return str(self)
-
 
 class OblivionState:
     def __init__(self):
@@ -81,7 +72,6 @@ class StateMachine:
             if EPS not in self.triggers[terminal]:
                 self.triggers[terminal][EPS] = set()
             self.triggers[terminal][EPS].add(other_machine.init)
-            # print("ADD %s -EPS-> %s" % (terminal, other_machine.init))
         # -----updating init and terminals------
         self.terminals = other_machine.terminals
         self.lastStar = False
@@ -169,7 +159,6 @@ class StateMachine:
             else:  # c - letter
                 operands.append(StateMachine(c))
 
-            # print(operands[-1])
         if len(operands) != 1:
             raise ValueError("invalid regular expression: stack size must be 1 at the end of parsing")
 
@@ -183,48 +172,16 @@ class StateMachine:
             self.triggers[state].pop(EPS, None)
 
         to_delete = self.get_unreachable(self.init)
-        # print("UNREACHABLE FROM %s: %s" % (self.init, self.get_unreachable(self.init)))
         self.states -= to_delete
         self.terminals -= to_delete
         for state in to_delete:
             self.triggers.pop(state, None)
         return self
 
-    def __str__(self):
-        ret = "Regex:%s\nStates: %s\nInit:%s\nTerminals:%s\nTriggers:\n" % \
-              (self.regex, ''.join(map(str, self.states)), str(self.init), ' '.join(map(str, self.terminals)))
-        for state in self.triggers:
-            ret += "%s: " % state
-            for trigger in self.triggers[state]:
-                ret += "%s -> [%s] " % (trigger, ", ".join(map(str, self.triggers[state][trigger])))
-            ret += "\n"
-        return ret
-
-    def __repr__(self):
-        return str(self)
-
     def get_states(self):
         return self.states
 
-    def get_eps_reachable(self, init_state: State):
-        reached = set()
-        # print(self)
-        # print(init_state)
-        # print(type(self.triggers[init_state]))
-        # sleep(1)
-        q = Queue()
-        q.put(init_state)
-        reached.add(init_state)
-        while not q.empty():
-            cur_state = q.get()
-            for next_state in self.adjacent(cur_state, EPS):
-                if next_state not in reached:
-                    q.put(next_state)
-                    reached.add(next_state)
-        return reached
-
     def transitive_close(self, start, cur_state, used):
-        # print("TRANSITIVE: START: %s, CUR: %s" % (start, cur_state))
         used[cur_state] = True
         if cur_state in self.terminals:
             self.terminals.add(start)
@@ -241,7 +198,6 @@ class StateMachine:
                         if trigger not in self.triggers[start]:
                             self.triggers[start][trigger] = set()
                         self.triggers[start][trigger].add(triggered)
-                        # print("Add %s -%s-> %s" % (start, trigger, triggered))
         return self
 
     def get_unreachable(self, init):
@@ -265,21 +221,14 @@ class StateMachine:
 def recursive_traversal(regex_machine: StateMachine, input_string, init_state: State, way=None):
     if way is None:
         way = []
-        # print(input_string)
     if input_string == "":
-        # print(way)
         return 0
 
     if input_string[0] not in regex_machine.triggers[init_state]:
-        # print(way)
-        # print("LEFT: %s\nTRIGGERS:%s" % (input_string, regex_machine.triggers[init_state]))
-        # if init_state.num == 22 and input_string[:6] == "aababa":
-        #     print("!!!!!!!!SASAY:%s" % regex_machine.triggers[init_state])
         return 0
     else:
         max_len = 0
         for triggered in regex_machine.adjacent(init_state, input_string[0]):
-            # print("FROM %s REACHABLE %s, INPUT IS %s" % (init_state, triggered, input_string))
             max_len = max(max_len, 1 + recursive_traversal(regex_machine, input_string[1:], triggered, way + [init_state]))
         return max_len
 
@@ -350,6 +299,12 @@ class TestMaxSubstring(unittest.TestCase):
         machine = StateMachine.parse_from_polish_notation_regex(regex)
         self.assertEqual(max_substring(machine, example), 4)
 
+    def test_7(self):
+        regex = "a1+*"
+        example = "aaaaba"
+        machine = StateMachine(StateMachine.parse_from_polish_notation_regex(regex))
+        self.assertEqual(max_substring(machine, example), 4)
+
 
 def main():
     sys.setrecursionlimit(100000)
@@ -360,5 +315,5 @@ def main():
     print(max_substring(regex_machine, example))
 
 if __name__ == '__main__':
-    #unittest.main()
+    # unittest.main()
     main()
